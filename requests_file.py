@@ -37,7 +37,7 @@ class FileAdapter(BaseAdapter):
             # Split the path on / (the URL directory separator) and decode any
             # % escapes in the parts
             path_parts = [unquote(p) for p in url_parts.path.split('/')]
-
+            
             # Strip out the leading empty parts created from the leading /'s
             while path_parts and not path_parts[0]:
                 path_parts.pop(0)
@@ -51,6 +51,8 @@ class FileAdapter(BaseAdapter):
             # so that a directory separator can correctly be added to the real
             # path, and remove any empty path parts between the drive and the path.
             # Assume that a part ending with : or | (legacy) is a drive.
+            path_drive = ''
+            relative = False
             if path_parts and (path_parts[0].endswith('|') or
                                path_parts[0].endswith(':')):
                 path_drive = path_parts.pop(0)
@@ -59,13 +61,16 @@ class FileAdapter(BaseAdapter):
 
                 while path_parts and not path_parts[0]:
                     path_parts.pop(0)
-            else:
-                path_drive = ''
+            elif (os.stat(path_parts[0]) or path_parts[0] is '.') and not path_drive:
+                relative = True
 
             # Try to put the path back together
             # Join the drive back in, and stick os.sep in front of the path to
-            # make it absolute.
-            path = path_drive + os.sep + os.path.join(*path_parts)
+            if not relative:
+                # make it absolute.
+                path = path_drive + os.sep + os.path.join(*path_parts)
+            else:
+                path = os.path.join(*path_parts)
 
             # Check if the drive assumptions above were correct. If path_drive
             # is set, and os.path.splitdrive does not return a drive, it wasn't
